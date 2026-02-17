@@ -1,53 +1,49 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Standard generation for product descriptions
 export const generateProductDescription = async (name: string, category: string, keywords: string) => {
-  // Always create a new instance right before making an API call to ensure latest config
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `You are an expert digital marketer for an agricultural marketplace named KissanKart. 
+      contents: `You are an expert digital marketer for KissanKart Pakistan. 
       Write a compelling, SEO-friendly product description for: ${name}. 
       Category: ${category}. 
-      Additional keywords: ${keywords}. 
-      The description should highlight freshness, direct farm-to-table benefits, and quality. 
-      Keep it under 150 words.`,
+      Keywords: ${keywords}. 
+      Focus on Pakistani agriculture quality, freshness, and organic nature. Keep it under 100 words.`,
     });
-    return response.text || "Fresh produce directly from the farm.";
+    return response.text || "Pure and fresh produce directly from our local farms.";
   } catch (error) {
     console.error("AI Generation Error:", error);
-    return "Error generating description. Please try again.";
+    return "Freshly harvested produce with quality guaranteed.";
   }
 };
 
-// Marketing tips using JSON response schema
-export const getMarketingTips = async (category: string) => {
+export const generateFarmerBio = async (name: string, location: string, crops: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Give 3 quick digital marketing tips for a farmer selling ${category} online. 
-      Focus on how to take better photos, how to price fairly, and how to build trust with customers.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              tip: { type: Type.STRING },
-              description: { type: Type.STRING }
-            },
-            required: ["tip", "description"]
-          }
-        }
-      }
+      contents: `Create a professional and trust-building bio for a Pakistani farmer named ${name} based in ${location}. 
+      They specialize in ${crops}. Use warm, hardworking, and honest tone. Mention years of experience and commitment to organic practices. Keep it short.`,
     });
-    // response.text is a property containing the generated string
-    return JSON.parse(response.text.trim());
+    return response.text || "Hardworking farmer dedicated to bringing fresh produce to your table.";
   } catch (error) {
-    return [{ tip: "Quality Check", description: "Always ensure your harvest is clean and well-packaged." }];
+    return "Dedicated local farmer committed to sustainable and organic farming practices.";
+  }
+};
+
+export const getPriceSuggestion = async (productName: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `As an agricultural market expert in Pakistan, suggest a fair 'Farmer Base Price' per kg for '${productName}' in PKR. 
+      Return only the number representing the average market rate for high-quality produce.`,
+    });
+    const suggested = parseInt(response.text.replace(/[^0-9]/g, ''));
+    return isNaN(suggested) ? 100 : suggested;
+  } catch (error) {
+    return 100;
   }
 };

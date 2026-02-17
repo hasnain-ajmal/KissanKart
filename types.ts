@@ -9,9 +9,22 @@ export interface Product {
   consumerPrice: number; // price + 15%
   category: string;
   unit: string;
-  image: string;
+  media: string[]; // Support for multiple images/videos
   location: string;
   rating: number;
+  stockStatus: 'In Stock' | 'Sold Out' | 'Limited';
+}
+
+export interface Farmer {
+  id: string;
+  name: string;
+  bio: string;
+  location: string;
+  joinedDate: string;
+  rating: number;
+  phone: string;
+  verified: boolean;
+  profileImage: string;
 }
 
 export interface User {

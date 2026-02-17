@@ -1,71 +1,51 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, LayoutGrid, User, Wheat, Search, TrendingUp, Sparkles, Plus, MapPin, Star, Trash2 } from 'lucide-react';
-import { Product, CartItem, CATEGORIES, User as UserType, Category } from './types';
-import { generateProductDescription } from './services/geminiService';
+import React, { useState, useMemo } from 'react';
+import { 
+  ShoppingCart, Wheat, Search, TrendingUp, Sparkles, MapPin, 
+  Star, Trash2, Camera, Plus, CheckCircle, ChevronLeft, 
+  User as UserIcon, LogOut, Video, Package, ArrowRight
+} from 'lucide-react';
+import { Product, CartItem, CATEGORIES, Farmer, Category } from './types';
+import { generateProductDescription, generateFarmerBio, getPriceSuggestion } from './services/geminiService';
 
-// Initial Mock Data with Pakistani context
+// Mock Data
+const INITIAL_FARMERS: Farmer[] = [
+  {
+    id: 'f1',
+    name: 'Muhammad Ahmed',
+    bio: 'Dedicated to growing the finest Basmati rice in the fertile lands of Gujranwala for over 20 years.',
+    location: 'Gujranwala, Punjab',
+    joinedDate: 'Jan 2024',
+    rating: 4.9,
+    phone: '0300-1234567',
+    verified: true,
+    profileImage: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&q=80&w=200'
+  }
+];
+
 const INITIAL_PRODUCTS: Product[] = [
   {
     id: '1',
     farmerId: 'f1',
     farmerName: 'Muhammad Ahmed',
-    name: 'Basmati Super Kernel Rice',
-    description: 'Aromatic, extra-long grain aged Basmati rice from the fields of Gujranwala.',
+    name: 'Premium Super Basmati',
+    description: 'Aromatic, long-grain rice, aged for 2 years for perfect fluffiness.',
     price: 320,
-    consumerPrice: 368, // 320 * 1.15
+    consumerPrice: 368,
     category: 'Rice',
     unit: 'kg',
-    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=400',
+    media: ['https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=400'],
     location: 'Gujranwala, Punjab',
-    rating: 4.9
-  },
-  {
-    id: '2',
-    farmerId: 'f2',
-    farmerName: 'Zubair Khan',
-    name: 'Sindhri Mangoes (Premium)',
-    description: 'The king of fruits from Mirpur Khas. Sweet, pulpy, and fiberless.',
-    price: 180,
-    consumerPrice: 207,
-    category: 'Fruits',
-    unit: 'kg',
-    image: 'https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&q=80&w=400',
-    location: 'Mirpur Khas, Sindh',
-    rating: 4.8
-  },
-  {
-    id: '3',
-    farmerId: 'f3',
-    farmerName: 'Bashir Ahmed',
-    name: 'Red Desi Carrots',
-    description: 'Crunchy and sweet organic carrots, perfect for Gajar ka Halwa.',
-    price: 60,
-    consumerPrice: 69,
-    category: 'Vegetables',
-    unit: 'kg',
-    image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&q=80&w=400',
-    location: 'Lahore, Punjab',
-    rating: 4.7
-  },
-  {
-    id: '4',
-    farmerId: 'f4',
-    farmerName: 'Fatima Bibi',
-    name: 'Organic Desi Ghee',
-    description: 'Pure buffalo milk ghee prepared using traditional methods in Sahiwal.',
-    price: 2200,
-    consumerPrice: 2530,
-    category: 'Dairy',
-    unit: 'kg',
-    image: 'https://images.unsplash.com/photo-1589927986089-35812388d1f4?auto=format&fit=crop&q=80&w=400',
-    location: 'Sahiwal, Punjab',
-    rating: 5.0
+    rating: 4.9,
+    stockStatus: 'In Stock'
   }
 ];
 
 export default function App() {
-  const [view, setView] = useState<'home' | 'consumer' | 'farmer' | 'cart'>('home');
+  const [view, setView] = useState<'home' | 'consumer' | 'farmer-portal' | 'farmer-profile' | 'cart'>('home');
+  const [currentFarmer, setCurrentFarmer] = useState<Farmer | null>(null);
+  const [selectedFarmerProfile, setSelectedFarmerProfile] = useState<Farmer | null>(null);
+  const [farmers, setFarmers] = useState<Farmer[]>(INITIAL_FARMERS);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,61 +68,69 @@ export default function App() {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    alert(`${product.name} added to cart!`);
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const handleFarmerRegister = (farmer: Farmer) => {
+    setFarmers(prev => [...prev, farmer]);
+    setCurrentFarmer(farmer);
+    setView('farmer-portal');
   };
 
-  const totalCartPrice = cart.reduce((acc, item) => acc + (item.consumerPrice * item.quantity), 0);
-
-  const handleFarmerSubmit = (newProduct: Product) => {
-    setProducts(prev => [newProduct, ...prev]);
-    setView('consumer');
-    alert('Your product has been posted successfully!');
+  const handleFarmerProfileView = (farmerId: string) => {
+    const f = farmers.find(farm => farm.id === farmerId);
+    if (f) {
+      setSelectedFarmerProfile(f);
+      setView('farmer-profile');
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-green-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div 
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => setView('home')}
-          >
-            <div className="bg-green-600 p-2 rounded-lg">
-              <Wheat className="text-white h-6 w-6" />
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-green-100">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+            <div className="bg-green-600 p-2 rounded-xl">
+              <Wheat className="text-white h-5 w-5" />
             </div>
-            <h1 className="text-2xl font-bold brand-font text-green-800">KissanKart</h1>
+            <h1 className="text-xl font-bold brand-font text-green-900 tracking-tight">KissanKart</h1>
           </div>
 
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            <button onClick={() => setView('consumer')} className="hover:text-green-600">Buy Fresh</button>
-            <button onClick={() => setView('farmer')} className="hover:text-green-600">Farmer Portal</button>
+          <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
+            <button onClick={() => setView('consumer')} className="hover:text-green-600 transition">Marketplace</button>
+            <button onClick={() => setView('farmer-portal')} className="hover:text-green-600 transition">Sell Harvest</button>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative cursor-pointer group" onClick={() => setView('cart')}>
-              <ShoppingCart className="h-6 w-6 text-slate-600 group-hover:text-green-600 transition" />
+            <div className="relative cursor-pointer group p-2 rounded-full hover:bg-slate-100 transition" onClick={() => setView('cart')}>
+              <ShoppingCart className="h-5 w-5 text-slate-700" />
               {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-white">
+                <span className="absolute top-1 right-1 bg-orange-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-white">
                   {cart.length}
                 </span>
               )}
             </div>
-            <button 
-              className="bg-green-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-green-700 transition"
-              onClick={() => setView('farmer')}
-            >
-              Start Selling
-            </button>
+            {currentFarmer ? (
+              <button 
+                className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200 text-sm font-bold"
+                onClick={() => setView('farmer-portal')}
+              >
+                <img src={currentFarmer.profileImage} className="w-6 h-6 rounded-full" />
+                <span>Dashboard</span>
+              </button>
+            ) : (
+              <button 
+                className="bg-green-700 text-white px-5 py-2 rounded-full text-sm font-bold hover:bg-green-800 transition shadow-lg shadow-green-100"
+                onClick={() => setView('farmer-portal')}
+              >
+                Join as Farmer
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="flex-grow">
-        {view === 'home' && <HomeHero onStartShopping={() => setView('consumer')} onStartSelling={() => setView('farmer')} />}
+        {view === 'home' && <HomeHero onStartShopping={() => setView('consumer')} onStartSelling={() => setView('farmer-portal')} />}
         {view === 'consumer' && (
           <ConsumerPortal 
             products={filteredProducts} 
@@ -151,443 +139,488 @@ export default function App() {
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
             onAddToCart={addToCart}
+            onViewFarmer={handleFarmerProfileView}
           />
         )}
-        {view === 'farmer' && <FarmerPortal onSubmit={handleFarmerSubmit} />}
-        {view === 'cart' && <CartView items={cart} onRemove={removeFromCart} total={totalCartPrice} onCheckout={() => alert('Order placed! (Simulated)')} />}
+        {view === 'farmer-portal' && (
+          currentFarmer ? 
+          <FarmerDashboard 
+            farmer={currentFarmer} 
+            onPostProduct={(p) => setProducts([p, ...products])}
+            onLogout={() => setCurrentFarmer(null)}
+          /> : 
+          <FarmerRegistration onRegister={handleFarmerRegister} />
+        )}
+        {view === 'farmer-profile' && selectedFarmerProfile && (
+          <FarmerProfile 
+            farmer={selectedFarmerProfile} 
+            products={products.filter(p => p.farmerId === selectedFarmerProfile.id)}
+            onAddToCart={addToCart}
+            onBack={() => setView('consumer')}
+          />
+        )}
+        {view === 'cart' && <CartView items={cart} onRemove={(id) => setCart(cart.filter(c => c.id !== id))} onCheckout={() => alert('Order Placed!')} />}
       </main>
 
-      <footer className="bg-slate-900 text-slate-400 py-12 px-4">
+      <footer className="bg-slate-900 text-slate-500 py-16 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
-          <div className="space-y-4">
-            <h3 className="text-white font-bold brand-font text-2xl">KissanKart</h3>
-            <p className="text-sm leading-relaxed">Pakistan's premier direct farmer-to-consumer marketplace. Freshness guaranteed, fairness promised.</p>
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-6">Explore</h4>
-            <ul className="text-sm space-y-3">
-              <li className="hover:text-white cursor-pointer" onClick={() => { setSelectedCategory('Vegetables'); setView('consumer'); }}>Vegetables</li>
-              <li className="hover:text-white cursor-pointer" onClick={() => { setSelectedCategory('Rice'); setView('consumer'); }}>Rice & Grains</li>
-              <li className="hover:text-white cursor-pointer" onClick={() => { setSelectedCategory('Fruits'); setView('consumer'); }}>Seasonal Fruits</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-6">Farmer Support</h4>
-            <ul className="text-sm space-y-3">
-              <li className="hover:text-white cursor-pointer" onClick={() => setView('farmer')}>How to Sell</li>
-              <li className="hover:text-white cursor-pointer" onClick={() => setView('farmer')}>AI Marketing Help</li>
-              <li className="hover:text-white cursor-pointer" onClick={() => setView('farmer')}>Payment Cycles</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-semibold mb-6">Transparency</h4>
-            <p className="text-xs italic leading-relaxed">
-              "We take a fixed 15% platform fee from the final consumer price. This covers logistics, digital marketing, and AI tools for our farmers."
+          <div className="space-y-4 col-span-1 md:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <Wheat className="text-green-500 h-6 w-6" />
+              <h3 className="text-white font-bold brand-font text-2xl">KissanKart</h3>
+            </div>
+            <p className="text-sm leading-relaxed max-w-sm">
+              We empower Pakistani farmers by removing middlemen, ensuring higher profits for rural communities and fresher produce for urban families.
             </p>
           </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-800 text-center text-xs">
-          © {new Date().getFullYear()} KissanKart Pakistan. All rights reserved.
+          <div>
+            <h4 className="text-white font-bold mb-6">Categories</h4>
+            <ul className="text-sm space-y-3">
+              {CATEGORIES.slice(0, 4).map(c => <li key={c} className="hover:text-green-400 cursor-pointer">{c}</li>)}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-white font-bold mb-6">Transparency</h4>
+            <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+              <p className="text-[11px] uppercase tracking-widest text-green-400 font-bold mb-2">Platform Fee</p>
+              <p className="text-xs italic text-slate-300">15% fee included in buyer price covers logistics, insurance, and AI marketing tools for farmers.</p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
 
-/* --- Sub-Components --- */
+/* --- Components --- */
 
-const HomeHero = ({ onStartShopping, onStartSelling }: { onStartShopping: () => void, onStartSelling: () => void }) => (
-  <section className="relative h-[550px] flex items-center justify-center overflow-hidden bg-green-900">
-    <div className="absolute inset-0">
-      <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1600" className="w-full h-full object-cover opacity-50" alt="Pakistani Farm" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-green-900/80"></div>
+const HomeHero = ({ onStartShopping, onStartSelling }: any) => (
+  <section className="relative min-h-[600px] flex items-center justify-center bg-green-950 px-4 overflow-hidden">
+    <div className="absolute inset-0 opacity-40">
+      <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1600" className="w-full h-full object-cover" />
     </div>
-    <div className="relative z-10 text-center px-4 max-w-4xl">
-      <span className="bg-orange-500/90 text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-4 inline-block">Direct From Farm</span>
-      <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 brand-font leading-tight">Farmer's Harvest,<br/>Your Table.</h1>
-      <p className="text-xl text-green-50 mb-10 font-light max-w-2xl mx-auto">Skip the middlemen. Support Pakistani farmers and get 100% fresh produce at fair prices.</p>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-        <button 
-          onClick={onStartShopping}
-          className="bg-white text-green-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-green-50 transition shadow-2xl w-full sm:w-auto"
-        >
-          Browse Products
-        </button>
-        <button 
-          onClick={onStartSelling}
-          className="bg-orange-600 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-700 transition shadow-2xl border-b-4 border-orange-800 w-full sm:w-auto"
-        >
-          Sell Your Harvest
-        </button>
+    <div className="relative z-10 text-center max-w-3xl">
+      <span className="inline-block px-4 py-1.5 rounded-full bg-orange-600/90 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-xl">Pakistan's #1 Farmer Marketplace</span>
+      <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 brand-font leading-tight">Farmer Direct,<br/>Quality Perfect.</h1>
+      <p className="text-lg text-green-100 mb-10 font-light">Join the movement of fair trade. 100% fresh produce from local Pakistani soil directly to your home.</p>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <button onClick={onStartShopping} className="w-full sm:w-auto px-10 py-4 bg-white text-green-950 rounded-2xl font-bold text-lg hover:bg-green-50 transition shadow-2xl">Browse Harvest</button>
+        <button onClick={onStartSelling} className="w-full sm:w-auto px-10 py-4 bg-orange-600 text-white rounded-2xl font-bold text-lg hover:bg-orange-700 transition shadow-2xl flex items-center justify-center gap-2">Register as Farmer <ArrowRight className="h-5 w-5" /></button>
       </div>
     </div>
   </section>
 );
 
-const ProductCard: React.FC<{ product: Product; onAddToCart: (p: Product) => void }> = ({ product, onAddToCart }) => (
-  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-    <div className="relative h-56 overflow-hidden">
-      <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
-      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-orange-600 shadow-sm border border-orange-100">
-        <Star className="h-3 w-3 fill-current" /> {product.rating}
-      </div>
-      <div className="absolute bottom-3 left-3 bg-green-700 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded shadow-lg">
-        {product.category}
-      </div>
-    </div>
-    <div className="p-6">
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="font-bold text-lg text-slate-800 leading-tight group-hover:text-green-700 transition-colors">{product.name}</h3>
-      </div>
-      
-      <div className="flex items-baseline gap-1 mb-4">
-        <span className="text-2xl font-black text-green-800">Rs. {product.consumerPrice}</span>
-        <span className="text-sm text-slate-400 font-medium">per {product.unit}</span>
-      </div>
-
-      <p className="text-sm text-slate-500 mb-6 line-clamp-2 leading-relaxed">{product.description}</p>
-      
-      <div className="flex items-center gap-2 mb-6 text-xs font-medium text-slate-400">
-        <MapPin className="h-4 w-4 text-orange-500" />
-        <span>{product.location} • {product.farmerName}</span>
-      </div>
-
-      <button 
-        onClick={() => onAddToCart(product)}
-        className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-      >
-        <ShoppingCart className="h-4 w-4" /> Add to Kart
-      </button>
-    </div>
-  </div>
-);
-
-const ConsumerPortal = ({ 
-  products, 
-  searchTerm, 
-  setSearchTerm, 
-  selectedCategory, 
-  setSelectedCategory,
-  onAddToCart
-}: { 
-  products: Product[], 
-  searchTerm: string, 
-  setSearchTerm: (v: string) => void,
-  selectedCategory: string,
-  setSelectedCategory: (v: string) => void,
-  onAddToCart: (p: Product) => void
-}) => (
-  <div className="max-w-7xl mx-auto px-4 py-16">
-    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
-      <div className="max-w-xl">
-        <h2 className="text-4xl font-bold text-slate-900 brand-font mb-3">Direct from Pakistan's Farms</h2>
-        <p className="text-slate-500 text-lg">Pure, fresh, and supporting the backbone of our nation. Filter by your needs below.</p>
-      </div>
-      <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-        <div className="relative flex-grow sm:flex-grow-0">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
-          <input 
-            type="text"
-            placeholder="Search mangoes, rice, etc..."
-            className="pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-500 outline-none w-full sm:w-80 shadow-sm transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <select 
-          className="px-6 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-green-100 shadow-sm font-semibold text-slate-700"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-          <option value="All">All Categories</option>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-    </div>
-
-    {products.length === 0 ? (
-      <div className="text-center py-32 bg-white rounded-3xl border border-slate-100 shadow-inner">
-        <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Search className="h-10 w-10 text-slate-300" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2">No items found</h3>
-        <p className="text-slate-500">Try adjusting your search or category filters.</p>
-      </div>
-    ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-        {products.map(product => (
-          <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
-        ))}
-      </div>
-    )}
-  </div>
-);
-
-const FarmerPortal = ({ onSubmit }: { onSubmit: (p: Product) => void }) => {
+const FarmerRegistration = ({ onRegister }: { onRegister: (f: Farmer) => void }) => {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<Category>('Vegetables');
-  const [price, setPrice] = useState<number>(0);
-  const [unit, setUnit] = useState('kg');
-  const [keywords, setKeywords] = useState('');
-  const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [loadingAI, setLoadingAI] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [crops, setCrops] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleAIHelp = async () => {
-    if (!name) return alert('Please enter product name first');
-    setLoadingAI(true);
-    const desc = await generateProductDescription(name, category, keywords);
-    setDescription(desc);
-    setLoadingAI(false);
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      farmerId: 'f-user',
-      farmerName: 'New Farmer', 
+    setLoading(true);
+    const bio = await generateFarmerBio(name, location, crops);
+    const newFarmer: Farmer = {
+      id: 'f' + Date.now(),
       name,
-      category,
-      price,
-      consumerPrice: Math.ceil(price * 1.15),
-      unit,
-      description,
-      image: `https://images.unsplash.com/photo-1595111031303-34672692292c?auto=format&fit=crop&q=80&w=400`,
-      location: location || 'Punjab, Pakistan',
-      rating: 5.0
+      location,
+      phone,
+      bio,
+      joinedDate: 'Current',
+      rating: 5.0,
+      verified: false,
+      profileImage: `https://ui-avatars.com/api/?name=${name}&background=15803d&color=fff`
     };
-    onSubmit(newProduct);
+    onRegister(newFarmer);
+    setLoading(false);
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-16">
-      <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col lg:flex-row">
-        {/* Marketing Sidebar */}
-        <div className="bg-green-800 p-10 text-white lg:w-[35%] flex flex-col justify-between">
-          <div>
-            <h2 className="text-3xl font-bold brand-font mb-8">Empowering You.</h2>
-            <ul className="space-y-8">
-              <li className="flex gap-4">
-                <div className="bg-green-700 p-3 rounded-2xl">
-                  <TrendingUp className="h-6 w-6 text-green-300" />
-                </div>
-                <div>
-                  <p className="font-bold text-lg mb-1">Higher Profits</p>
-                  <p className="text-sm text-green-100 leading-relaxed">By selling directly, you avoid heavy middleman cuts. You keep 85%.</p>
-                </div>
-              </li>
-              <li className="flex gap-4">
-                <div className="bg-green-700 p-3 rounded-2xl">
-                  <Sparkles className="h-6 w-6 text-green-300" />
-                </div>
-                <div>
-                  <p className="font-bold text-lg mb-1">AI Listing Helper</p>
-                  <p className="text-sm text-green-100 leading-relaxed">Don't worry about writing. Our AI helps create professional descriptions for your crop.</p>
-                </div>
-              </li>
-              <li className="flex gap-4">
-                <div className="bg-green-700 p-3 rounded-2xl">
-                  <LayoutGrid className="h-6 w-6 text-green-300" />
-                </div>
-                <div>
-                  <p className="font-bold text-lg mb-1">Nationwide Visibility</p>
-                  <p className="text-sm text-green-100 leading-relaxed">Post in minutes and reach customers across major Pakistani cities.</p>
-                </div>
-              </li>
-            </ul>
+    <div className="max-w-xl mx-auto py-20 px-4">
+      <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
+        <div className="text-center mb-10">
+          <div className="bg-green-100 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <UserIcon className="h-8 w-8 text-green-700" />
           </div>
+          <h2 className="text-3xl font-bold text-slate-900 brand-font">Join KissanKart</h2>
+          <p className="text-slate-500 mt-2">Start selling your harvest directly to customers across Pakistan.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <input required type="text" placeholder="Full Name" className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none" value={name} onChange={e => setName(e.target.value)} />
+              <input required type="text" placeholder="Location (e.g., Multan, Punjab)" className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none" value={location} onChange={e => setLocation(e.target.value)} />
+              <input required type="tel" placeholder="Phone Number (03XX-XXXXXXX)" className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none" value={phone} onChange={e => setPhone(e.target.value)} />
+              <input required type="text" placeholder="Primary Crops (e.g., Mangoes, Rice)" className="w-full px-5 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none" value={crops} onChange={e => setCrops(e.target.value)} />
+            </div>
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full py-4 bg-green-700 text-white rounded-2xl font-bold text-lg hover:bg-green-800 transition shadow-xl disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : 'Complete Registration'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
-          <div className="mt-12 p-6 bg-green-900 rounded-2xl border border-green-700 shadow-inner">
-            <p className="text-xs font-black uppercase tracking-widest text-green-400 mb-4">Pricing Calculator (Rs.)</p>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-green-200">Your Base Price:</span>
-                <span className="font-bold">Rs. {price || 0}</span>
+const FarmerDashboard = ({ farmer, onPostProduct, onLogout }: any) => {
+  const [showListingForm, setShowListingForm] = useState(false);
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState(0);
+  const [category, setCategory] = useState<Category>('Vegetables');
+  const [unit, setUnit] = useState('kg');
+  const [desc, setDesc] = useState('');
+  const [media, setMedia] = useState<string[]>([]);
+  const [tempMedia, setTempMedia] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
+
+  const handlePost = (e: any) => {
+    e.preventDefault();
+    if (media.length === 0) return alert('At least one image is required!');
+    const p: Product = {
+      id: 'p' + Date.now(),
+      farmerId: farmer.id,
+      farmerName: farmer.name,
+      name,
+      description: desc,
+      price,
+      consumerPrice: Math.ceil(price * 1.15),
+      category,
+      unit,
+      media,
+      location: farmer.location,
+      rating: 5.0,
+      stockStatus: 'In Stock'
+    };
+    onPostProduct(p);
+    setShowListingForm(false);
+    alert('Listing Successful!');
+  };
+
+  const handleSuggestPrice = async () => {
+    if (!name) return alert('Enter product name first');
+    setLoadingAI(true);
+    const suggested = await getPriceSuggestion(name);
+    setPrice(suggested);
+    setLoadingAI(false);
+  };
+
+  const handleAIDesc = async () => {
+    if (!name) return alert('Enter product name first');
+    setLoadingAI(true);
+    const description = await generateProductDescription(name, category, "");
+    setDesc(description);
+    setLoadingAI(false);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto py-12 px-4">
+      <div className="flex flex-col md:flex-row gap-8">
+        <div className="md:w-1/3 space-y-6">
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-green-600"></div>
+            <img src={farmer.profileImage} className="w-24 h-24 rounded-3xl mx-auto mb-4 border-4 border-white shadow-lg" />
+            <h3 className="text-2xl font-bold text-slate-900 brand-font">{farmer.name}</h3>
+            <p className="text-slate-400 text-sm flex items-center justify-center gap-1 mt-1 mb-4">
+              <MapPin className="h-3 w-3" /> {farmer.location}
+            </p>
+            <div className="flex justify-center gap-4 py-4 border-y border-slate-50">
+              <div className="text-center">
+                <p className="text-lg font-bold text-slate-800">{farmer.rating}</p>
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Rating</p>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-green-300 italic">+ Platform Fee (15%):</span>
-                <span>Rs. {Math.ceil(price * 0.15)}</span>
-              </div>
-              <div className="pt-3 border-t border-green-700 flex justify-between items-center">
-                <span className="font-bold text-green-100">Market Price:</span>
-                <span className="font-black text-2xl text-white">Rs. {Math.ceil(price * 1.15)}</span>
+              <div className="text-center border-l pl-4">
+                <p className="text-lg font-bold text-slate-800">{farmer.joinedDate}</p>
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Joined</p>
               </div>
             </div>
+            <p className="text-sm text-slate-500 my-6 italic leading-relaxed">"{farmer.bio}"</p>
+            <button onClick={onLogout} className="flex items-center gap-2 text-slate-400 hover:text-red-500 transition text-xs font-bold mx-auto">
+              <LogOut className="h-3 w-3" /> Logout
+            </button>
           </div>
         </div>
 
-        {/* Post Form */}
-        <div className="p-10 lg:w-[65%]">
-          <div className="mb-10">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">New Listing</h2>
-            <p className="text-slate-500">Provide details about your current harvest.</p>
+        <div className="md:w-2/3 space-y-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl font-bold text-slate-900 brand-font">Manage Harvest</h2>
+            <button 
+              onClick={() => setShowListingForm(!showListingForm)}
+              className="bg-orange-600 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-orange-100 hover:bg-orange-700 transition flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" /> {showListingForm ? 'Cancel' : 'Add New Crop'}
+            </button>
           </div>
-          
-          <form className="space-y-8" onSubmit={handleFormSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">What are you selling?</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-500 outline-none transition-all" 
-                  placeholder="e.g., Basmati Rice, Organic Tomatoes, Alphonso Mangoes" 
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
-                <select 
-                  className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 outline-none font-semibold text-slate-700"
-                  value={category}
-                  onChange={e => setCategory(e.target.value as Category)}
-                >
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Unit</label>
-                <select 
-                  className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 outline-none font-semibold text-slate-700"
-                  value={unit}
-                  onChange={e => setUnit(e.target.value)}
-                >
-                  <option value="kg">per kg</option>
-                  <option value="dozen">per dozen</option>
-                  <option value="crate">per crate</option>
-                  <option value="sack">per sack (50kg)</option>
-                  <option value="gram">per 500g</option>
-                </select>
-              </div>
+          {showListingForm && (
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <form onSubmit={handlePost} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Crop Name</label>
+                    <input required className="w-full px-5 py-3 rounded-xl border border-slate-200 outline-none" placeholder="e.g., Chaunsa Mangoes" value={name} onChange={e => setName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Category</label>
+                    <select className="w-full px-5 py-3 rounded-xl border border-slate-200 outline-none" value={category} onChange={e => setCategory(e.target.value as any)}>
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Base Price (PKR)</label>
+                    <div className="relative">
+                      <input required type="number" className="w-full px-5 py-3 rounded-xl border border-slate-200 outline-none" value={price || ''} onChange={e => setPrice(Number(e.target.value))} />
+                      <button type="button" onClick={handleSuggestPrice} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-green-600 hover:bg-green-50 rounded-lg transition">
+                        <Sparkles className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Your Base Price (Rs.)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Rs.</span>
-                  <input 
-                    required
-                    type="number" 
-                    className="w-full pl-12 pr-5 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 outline-none" 
-                    placeholder="0.00" 
-                    value={price || ''}
-                    onChange={e => setPrice(Number(e.target.value))}
-                  />
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Media (Images/Videos URL)</label>
+                  <div className="flex gap-2 mb-4">
+                    <input className="flex-grow px-5 py-3 rounded-xl border border-slate-200 outline-none" placeholder="Paste image/video URL" value={tempMedia} onChange={e => setTempMedia(e.target.value)} />
+                    <button type="button" onClick={() => { if(tempMedia) { setMedia([...media, tempMedia]); setTempMedia(''); } }} className="px-4 bg-slate-100 rounded-xl hover:bg-slate-200 transition">
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-2">
+                    {media.map((m, i) => (
+                      <div key={i} className="relative shrink-0">
+                        <img src={m} className="w-20 h-20 rounded-xl object-cover" />
+                        <button type="button" onClick={() => setMedia(media.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg">
+                          <Plus className="h-3 w-3 rotate-45" />
+                        </button>
+                      </div>
+                    ))}
+                    {media.length === 0 && <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300"><Camera className="h-6 w-6" /></div>}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-2">*At least one image is mandatory for your listing to go live.</p>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Story & Details</label>
+                    <button type="button" onClick={handleAIDesc} className="text-[10px] font-bold text-green-600 uppercase flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> AI Help
+                    </button>
+                  </div>
+                  <textarea required className="w-full px-5 py-3 rounded-xl border border-slate-200 outline-none h-32" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe the taste, harvest date, and quality..." />
+                </div>
+
+                <button type="submit" className="w-full py-4 bg-orange-600 text-white rounded-2xl font-bold text-xl hover:bg-orange-700 transition shadow-2xl shadow-orange-100">Post Listing</button>
+              </form>
+            </div>
+          )}
+
+          {!showListingForm && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg flex items-center gap-4">
+                <div className="bg-green-100 p-3 rounded-2xl text-green-700"><Package className="h-6 w-6" /></div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">0</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Sales Today</p>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Harvest Location</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 outline-none" 
-                  placeholder="e.g., Multan, Punjab" 
-                  value={location}
-                  onChange={e => setLocation(e.target.value)}
-                />
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg flex items-center gap-4">
+                <div className="bg-orange-100 p-3 rounded-2xl text-orange-700"><TrendingUp className="h-6 w-6" /></div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">Rs. 0</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase">Earnings</p>
+                </div>
               </div>
             </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">Product Story & Details</label>
-                <button 
-                  type="button"
-                  onClick={handleAIHelp}
-                  disabled={loadingAI}
-                  className="flex items-center gap-2 text-xs text-green-700 font-black uppercase tracking-wider hover:text-green-900 transition-colors disabled:opacity-50"
-                >
-                  <Sparkles className="h-4 w-4" /> {loadingAI ? 'Writing...' : 'Boost with AI'}
-                </button>
-              </div>
-              <textarea 
-                required
-                className="w-full px-5 py-3 border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-100 outline-none h-32 leading-relaxed" 
-                placeholder="Mention freshness, organic status, or specific variety..."
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-              />
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold text-xl hover:bg-orange-700 shadow-xl shadow-orange-100 transition-all active:scale-[0.98]"
-            >
-              Confirm & Post Harvest
-            </button>
-          </form>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-const CartView = ({ items, onRemove, total, onCheckout }: { items: CartItem[], onRemove: (id: string) => void, total: number, onCheckout: () => void }) => (
-  <div className="max-w-5xl mx-auto px-4 py-16">
-    <h2 className="text-4xl font-bold mb-10 brand-font text-slate-900">Your Shopping Kart</h2>
-    {items.length === 0 ? (
-      <div className="text-center py-32 bg-white rounded-[2rem] border-2 border-dashed border-slate-200 shadow-sm">
-        <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-          <ShoppingCart className="h-10 w-10 text-slate-300" />
-        </div>
-        <h3 className="text-2xl font-bold text-slate-800 mb-2">Kart is looking light</h3>
-        <p className="text-slate-500 mb-8">Add some fresh Pakistani produce to your basket!</p>
-        <button 
-          onClick={() => window.location.reload()} // Quick fix to navigate back
-          className="bg-green-700 text-white px-8 py-3 rounded-full font-bold hover:bg-green-800 transition"
-        >
-          Start Shopping
-        </button>
+const ConsumerPortal = ({ products, searchTerm, setSearchTerm, selectedCategory, setSelectedCategory, onAddToCart, onViewFarmer }: any) => (
+  <div className="max-w-7xl mx-auto py-16 px-4">
+    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16">
+      <div className="max-w-xl">
+        <h2 className="text-5xl font-bold text-slate-900 brand-font mb-4">Farmer Marketplace</h2>
+        <p className="text-slate-500 text-lg">Support the hardworking people of Pakistan. Fresh from harvest, directly to your doorstep.</p>
       </div>
-    ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <div className="lg:col-span-2 space-y-6">
-          {items.map(item => (
-            <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex items-center gap-6 shadow-sm hover:shadow-md transition-shadow">
-              <img src={item.image} className="h-24 w-24 rounded-2xl object-cover shadow-sm" alt={item.name} />
-              <div className="flex-grow">
-                <div className="flex justify-between items-start">
-                  <h4 className="font-bold text-xl text-slate-800 mb-1">{item.name}</h4>
-                  <button onClick={() => onRemove(item.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                    <Trash2 className="h-6 w-6" />
-                  </button>
-                </div>
-                <p className="text-sm text-slate-400 mb-3 font-medium">{item.quantity} {item.unit} x Rs. {item.consumerPrice}</p>
-                <p className="text-xl font-black text-green-700">Rs. {item.consumerPrice * item.quantity}</p>
+      <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+        <div className="relative group flex-grow">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search mangoes, rice, dairy..." 
+            className="w-full sm:w-80 pl-12 pr-6 py-4 bg-white rounded-2xl border border-slate-200 outline-none focus:ring-4 focus:ring-green-100 transition shadow-sm"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <select 
+          className="px-6 py-4 bg-white rounded-2xl border border-slate-200 outline-none font-bold text-slate-700"
+          value={selectedCategory}
+          onChange={e => setSelectedCategory(e.target.value)}
+        >
+          <option value="All">All Items</option>
+          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      {products.map((p: Product) => (
+        <div key={p.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 group overflow-hidden flex flex-col">
+          <div className="h-56 relative overflow-hidden">
+            <img src={p.media[0]} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
+            <div className="absolute top-4 left-4 flex gap-2">
+              <span className="bg-green-600 text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg">{p.category}</span>
+              {p.media.length > 1 && <span className="bg-white/80 backdrop-blur text-slate-900 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg flex items-center gap-1"><Camera className="h-3 w-3" /> +{p.media.length-1}</span>}
+            </div>
+          </div>
+          <div className="p-6 flex-grow flex flex-col">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-slate-900">{p.name}</h3>
+              <div className="flex items-center gap-1 text-orange-500 font-bold text-sm">
+                <Star className="h-4 w-4 fill-current" /> {p.rating}
+              </div>
+            </div>
+            <div 
+              className="flex items-center gap-2 mb-4 cursor-pointer hover:bg-slate-50 p-2 -ml-2 rounded-xl transition"
+              onClick={() => onViewFarmer(p.farmerId)}
+            >
+              <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center"><UserIcon className="h-3 w-3 text-slate-400" /></div>
+              <p className="text-xs font-bold text-slate-400 hover:text-green-600">By {p.farmerName}</p>
+            </div>
+            <p className="text-sm text-slate-500 line-clamp-2 mb-6 flex-grow leading-relaxed">{p.description}</p>
+            <div className="flex items-end justify-between mt-auto">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Price per {p.unit}</p>
+                <p className="text-2xl font-black text-green-800">Rs. {p.consumerPrice}</p>
+              </div>
+              <button 
+                onClick={() => onAddToCart(p)}
+                className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-green-700 transition active:scale-95"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const FarmerProfile = ({ farmer, products, onAddToCart, onBack }: any) => (
+  <div className="max-w-7xl mx-auto py-16 px-4">
+    <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-green-600 font-bold mb-10 transition">
+      <ChevronLeft className="h-5 w-5" /> Back to Market
+    </button>
+    
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="lg:col-span-1">
+        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl text-center">
+          <div className="relative inline-block mx-auto mb-6">
+            <img src={farmer.profileImage} className="w-32 h-32 rounded-[2rem] border-4 border-white shadow-xl" />
+            {farmer.verified && <CheckCircle className="absolute -bottom-2 -right-2 h-8 w-8 text-blue-500 fill-white" />}
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 brand-font mb-2">{farmer.name}</h2>
+          <p className="text-slate-400 flex items-center justify-center gap-2 mb-6">
+            <MapPin className="h-4 w-4" /> {farmer.location}
+          </p>
+          <div className="bg-green-50 p-6 rounded-3xl mb-8">
+            <p className="text-sm text-green-800 italic leading-relaxed">"{farmer.bio}"</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 rounded-2xl">
+              <p className="text-xl font-black text-slate-900">{farmer.rating}</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Farmer Rating</p>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-2xl">
+              <p className="text-xl font-black text-slate-900">{products.length}</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Crops Listed</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="lg:col-span-2">
+        <h3 className="text-3xl font-bold text-slate-900 brand-font mb-10">Fresh from {farmer.name}'s Farm</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          {products.map((p: any) => (
+            <div key={p.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col">
+              <img src={p.media[0]} className="h-48 w-full object-cover rounded-2xl mb-6" />
+              <h4 className="text-xl font-bold text-slate-900 mb-2">{p.name}</h4>
+              <p className="text-sm text-slate-500 line-clamp-2 mb-6 flex-grow">{p.description}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-black text-green-800">Rs. {p.consumerPrice} <span className="text-[10px] text-slate-400 uppercase font-bold">/ {p.unit}</span></p>
+                <button onClick={() => onAddToCart(p)} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-green-700 transition">
+                  <Plus className="h-5 w-5" />
+                </button>
               </div>
             </div>
           ))}
         </div>
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl h-fit sticky top-24">
-          <h3 className="font-bold text-2xl text-slate-900 mb-6">Order Summary</h3>
-          <div className="space-y-4 text-slate-600 mb-8">
-            <div className="flex justify-between text-lg">
-              <span>Items Total</span>
-              <span className="font-bold text-slate-900">Rs. {total}</span>
-            </div>
-            <div className="flex justify-between text-lg">
-              <span>Delivery Fee</span>
-              <span className="text-green-600 font-bold uppercase tracking-widest text-sm">Free</span>
-            </div>
-          </div>
-          <hr className="mb-6 border-slate-100" />
-          <div className="flex justify-between items-center mb-10">
-            <span className="font-bold text-xl text-slate-500">Total Payable</span>
-            <span className="font-black text-4xl text-green-800">Rs. {total}</span>
-          </div>
-          <button 
-            onClick={onCheckout}
-            className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold text-xl hover:bg-green-700 transition-all shadow-xl shadow-slate-100 active:scale-95"
-          >
-            Confirm Order
-          </button>
-          <p className="text-center text-[10px] text-slate-400 mt-6 uppercase tracking-[0.2em] font-bold">Secure Pakistani Checkout</p>
-        </div>
       </div>
-    )}
+    </div>
   </div>
 );
+
+const CartView = ({ items, onRemove, onCheckout }: any) => {
+  const total = items.reduce((acc: number, item: any) => acc + (item.consumerPrice * item.quantity), 0);
+  return (
+    <div className="max-w-5xl mx-auto py-20 px-4">
+      <h2 className="text-5xl font-bold text-slate-900 brand-font mb-12">Shopping Kart</h2>
+      {items.length === 0 ? (
+        <div className="bg-white py-24 rounded-[3rem] border-2 border-dashed border-slate-100 text-center shadow-inner">
+          <ShoppingCart className="h-20 w-20 text-slate-100 mx-auto mb-6" />
+          <p className="text-xl font-bold text-slate-300">Your kart is looking fresh but empty.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          <div className="lg:col-span-2 space-y-6">
+            {items.map((item: any) => (
+              <div key={item.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6 group">
+                <img src={item.media[0]} className="w-24 h-24 rounded-2xl object-cover" />
+                <div className="flex-grow">
+                  <h4 className="text-xl font-bold text-slate-900">{item.name}</h4>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{item.quantity} {item.unit} x Rs. {item.consumerPrice}</p>
+                  <p className="text-2xl font-black text-green-700 mt-2">Rs. {item.consumerPrice * item.quantity}</p>
+                </div>
+                <button onClick={() => onRemove(item.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition">
+                  <Trash2 className="h-6 w-6" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-2xl h-fit">
+            <h3 className="text-2xl font-bold text-slate-900 mb-8">Summary</h3>
+            <div className="space-y-4 mb-10">
+              <div className="flex justify-between text-slate-500">
+                <span>Subtotal</span>
+                <span className="font-bold text-slate-900">Rs. {total}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Direct Delivery</span>
+                <span className="text-green-600 font-bold uppercase tracking-widest text-[10px]">Free</span>
+              </div>
+              <hr className="border-slate-50" />
+              <div className="flex justify-between items-center">
+                <span className="text-xl font-bold text-slate-900">Total</span>
+                <span className="text-4xl font-black text-green-800">Rs. {total}</span>
+              </div>
+            </div>
+            <button onClick={onCheckout} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold text-xl hover:bg-green-700 transition shadow-xl shadow-slate-100 active:scale-[0.98]">Confirm Order</button>
+            <p className="text-center text-[9px] text-slate-400 mt-6 uppercase tracking-[0.3em] font-black">100% Secure Pakistani Checkout</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
