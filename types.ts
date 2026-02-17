@@ -5,14 +5,17 @@ export interface Product {
   farmerName: string;
   name: string;
   description: string;
-  price: number; // Base price set by farmer
-  consumerPrice: number; // price + 15%
+  price: number; 
+  consumerPrice: number; 
   category: string;
   unit: string;
-  media: string[]; // Support for multiple images/videos
+  media: string[]; 
   location: string;
+  lat?: number;
+  lng?: number;
   rating: number;
   stockStatus: 'In Stock' | 'Sold Out' | 'Limited';
+  freshnessLevel: 'High' | 'Medium';
 }
 
 export interface Farmer {
@@ -20,18 +23,20 @@ export interface Farmer {
   name: string;
   bio: string;
   location: string;
+  lat?: number;
+  lng?: number;
   joinedDate: string;
   rating: number;
   phone: string;
   verified: boolean;
   profileImage: string;
+  whatsAppEnabled: boolean;
 }
 
 export interface User {
   id: string;
   name: string;
   role: 'farmer' | 'consumer';
-  location: string;
 }
 
 export interface CartItem extends Product {

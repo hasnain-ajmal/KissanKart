@@ -1,8 +1,9 @@
 {
-  "name": "Copy of KissanKart",
+  "name": "KissanKart",
   "description": "A direct farmer-to-consumer e-commerce marketplace empowering local agriculture with AI-driven marketing and fair pricing.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }
