@@ -1,0 +1,8 @@
+{
+  "name": "Copy of KissanKart",
+  "description": "A direct farmer-to-consumer e-commerce marketplace empowering local agriculture with AI-driven marketing and fair pricing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
